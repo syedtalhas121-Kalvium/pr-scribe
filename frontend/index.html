@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PR-Scribe | AI Git Diff to PR Description Writer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col">
+  <!-- Header -->
+  <header class="border-b border-slate-800 bg-slate-900/60 backdrop-blur sticky top-0 z-10">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+      <div class="flex items-center space-x-3">
+        <span class="bg-indigo-600 text-white font-bold px-3 py-1.5 rounded-lg text-sm shadow">PR</span>
+        <h1 class="text-xl font-bold tracking-tight text-white">PR-Scribe</h1>
+        <span class="text-xs bg-slate-800 text-slate-400 px-2 py-0.5 rounded border border-slate-700">AI Powered</span>
+      </div>
+      <div class="text-xs text-slate-400">
+        Solved my PR description friction 🚀
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-6xl mx-auto px-4 py-8 flex-1 w-full grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <!-- Left Column: Input Form -->
+    <div class="flex flex-col space-y-4">
+      <div class="flex justify-between items-center">
+        <label for="diffInput" class="text-sm font-semibold text-slate-300">Paste your Git Diff (`git diff`) below:</label>
+        <button id="loadSampleBtn" class="text-xs text-indigo-400 hover:text-indigo-300 underline transition">Load Sample Diff</button>
+      </div>
+      <textarea id="diffInput" rows="16" placeholder="diff --git a/src/App.js b/src/App.js&#10;index 83db46f..2d7532d 100644&#10;--- a/src/App.js&#10;+++ b/src/App.js&#10;@@ -10,3 +10,5 @@..." class="w-full bg-slate-900 border border-slate-800 rounded-xl p-4 text-xs font-mono text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition resize-y"></textarea>
+      
+      <div class="flex items-center space-x-4">
+        <div class="flex-1">
+          <label for="backendUrl" class="block text-xs font-medium text-slate-400 mb-1">Backend API URL</label>
+          <input type="text" id="backendUrl" value="http://localhost:3000" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div class="pt-5">
+          <button id="generateBtn" class="bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-6 py-2.5 rounded-lg text-sm shadow-lg shadow-indigo-600/20 transition flex items-center justify-center min-w-[140px]">
+            <span>Generate PR</span>
+          </button>
+        </div>
+      </div>
+      <div id="errorBox" class="hidden bg-red-950/50 border border-red-800/60 text-red-300 text-xs p-3 rounded-lg"></div>
+    </div>
+
+    <!-- Right Column: Output / Result -->
+    <div class="flex flex-col space-y-4">
+      <div class="flex justify-between items-center">
+        <span class="text-sm font-semibold text-slate-300">Generated PR Description:</span>
+        <button id="copyBtn" class="hidden text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700 transition flex items-center space-x-1.5">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+          <span>Copy Markdown</span>
+        </button>
+      </div>
+
+      <div id="outputContainer" class="flex-1 bg-slate-900 border border-slate-800 rounded-xl p-6 overflow-y-auto min-h-[400px] text-slate-300 text-sm leading-relaxed prose prose-invert max-w-none">
+        <div class="h-full flex flex-col items-center justify-center text-slate-500 space-y-2 py-20">
+          <svg class="w-10 h-10 stroke-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+          <p class="text-xs">Your generated PR description will appear here...</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-800 py-6 text-center text-xs text-slate-500">
+    <p>PR-Scribe — Built for Kalvium Challenge #8. Backend AI only (GPT-4o-mini).</p>
+  </footer>
+
+  <script>
+    const sampleDiff = `diff --git a/backend/server.js b/backend/server.js
+index 4b82c1a..8912f7b 100644
+--- a/backend/server.js
++++ b/backend/server.js
+@@ -15,6 +15,10 @@ app.post('/api/auth', async (req, res) => {
+   const { username, password } = req.body;
++  
++  // Added input validation to prevent empty payloads
++  if (!username || !password) {
++    return res.status(400).json({ error: 'Username and password are required' });
++  }
++  
+   const user = await db.findUser(username);
+-  // old auth check
+   if (!user || user.password !== hash(password)) {
+     return res.status(401).json({ error: 'Invalid credentials' });
+   }
+   res.json({ success: true, token: generateToken(e) });
+ });`;
+
+    document.getElementById('loadSampleBtn').addEventListener('click', () => {
+      document.getElementById('diffInput').value = sampleDiff;
+    });
+
+    const generateBtn = document.getElementById('generateBtn');
+    const diffInput = document.getElementById('diffInput');
+    const backendUrlInput = document.getElementById('backendUrl');
+    const outputContainer = document.getElementById('outputContainer');
+    const errorBox = document.getElementById('errorBox');
+    const copyBtn = document.getElementById('copyBtn');
+
+    let rawMarkdownOutput = '';
+
+    generateBtn.addEventListener('click', async () => {
+      const diffText = diffInput.value.trim();
+      const backendUrl = backendUrlInput.value.trim().replace(/\\/+$/, '');
+
+      errorBox.classList.add('hidden');
+      errorBox.textContent = '';
+
+      if (!diffText) {
+        errorBox.textContent = 'Please enter or paste a valid git diff.';
+        errorBox.classList.remove('hidden');
+        return;
+      }
+
+      // Loading state
+      generateBtn.disabled = true;
+      generateBtn.innerHTML = `
+        <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <span>Analyzing...</span>
+      `;
+
+      outputContainer.innerHTML = `
+        <div class="h-full flex flex-col items-center justify-center text-slate-400 space-y-3 py-20">
+          <div class="animate-pulse flex space-x-2">
+            <div class="w-3 h-3 bg-indigo-500 rounded-full"></div>
+            <div class="w-3 h-3 bg-indigo-500 rounded-full"></div>
+            <div class="w-3 h-3 bg-indigo-500 rounded-full"></div>
+          </div>
+          <p class="text-xs">AI is analyzing your git diff and drafting PR description...</p>
+        </div>
+      `;
+
+      try {
+        const response = await fetch(`${backendUrl}/api/generate-pr`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ diffText })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || `Server responded with status ${response.status}`);
+        }
+
+        rawMarkdownOutput = data.description;
+        outputContainer.innerHTML = marked.parse(rawMarkdownOutput);
+        copyBtn.classList.remove('hidden');
+      } catch (err) {
+        console.error(err);
+        errorBox.textContent = `Error: ${err.message}. Make sure your backend server is running and accessible at ${backendUrl}.`;
+        errorBox.classList.remove('hidden');
+        outputContainer.innerHTML = `
+          <div class="h-full flex flex-col items-center justify-center text-red-400 space-y-2 py-20">
+            <p class="text-xs font-semibold">Generation Failed</p>
+            <p class="text-xs text-slate-500 text-center px-4">Could not connect to backend or generate PR. Check console for details.</p>
+          </div>
+        `;
+      } finally {
+        generateBtn.disabled = false;
+        generateBtn.innerHTML = '<span>Generate PR</span>';
+      }
+    });
+
+    copyBtn.addEventListener('click', () => {
+      if (!rawMarkdownOutput) return;
+      navigator.clipboard.writeText(rawMarkdownOutput).then(() => {
+        const originalText = copyBtn.innerHTML;
+        copyBtn.innerHTML = `
+          <svg class="w-3.5 h-3.5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+          <span class="text-green-400">Copied!</span>
+        `;
+        setTimeout(() => {
+          copyBtn.innerHTML = originalText;
+        }, 2000);
+      });
+    });
+  </script>
+</body>
+</html>
